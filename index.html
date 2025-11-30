@@ -1,92 +1,259 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Register Page</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Chess Review — Chess.com style</title>
+
+<!-- Chessground (board with arrows) -->
+<link rel="stylesheet" href="https://unpkg.com/chessground@8.3.0/dist/chessground.min.css" />
+<script src="https://unpkg.com/chessground@8.3.0/dist/chessground.min.js"></script>
+
+<!-- chess.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- stockfish wasm (YOU MUST PUT stockfish.js in same folder) -->
+<script src="stockfish.js"></script>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: linear-gradient(135deg, #4f9cff, #8364ff);
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0;
-    }
-
-    .card {
-        background: white;
-        width: 100%;
-        max-width: 400px;
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-    }
-
-    h2 {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #333;
-    }
-
-    label {
-        font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 5px;
-        display: block;
-    }
-
-    input {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        font-size: 14px;
-    }
-
-    button {
-        width: 100%;
-        padding: 12px;
-        background: #4f9cff;
-        color: white;
-        border: none;
-        font-size: 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    button:hover {
-        background: #3a7fe0;
-    }
+  body{ margin:0; font-family:Inter,Arial,Helvetica,sans-serif; background:#0f1216; color:#e6eef6; display:flex; justify-content:center; padding:18px;}
+  .wrap{ width:1200px; display:grid; grid-template-columns:460px 1fr 360px; gap:14px; }
+  .card{ background:#0b0f13; border-radius:10px; padding:12px; box-shadow:0 8px 30px rgba(0,0,0,0.6);}
+  #boardWrap{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+  #board{ width:420px; height:420px; background:#cbd5e1; border-radius:6px; overflow:hidden; }
+  .controls-row{ display:flex; gap:8px; margin-top:6px; align-items:center; }
+  .btn{ background:#2dd4bf; color:#062; padding:8px 10px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
+  .muted{ color:#98a0ab; font-size:13px;}
+  #movesList{ max-height:480px; overflow:auto; padding:8px; }
+  .move-row{ display:flex; gap:10px; align-items:center; padding:6px; border-radius:6px; cursor:pointer;}
+  .move-row:hover{ background: rgba(255,255,255,0.02); }
+  .move-num{ color:#98a0ab; width:34px; text-align:right; }
+  .move-san{ font-weight:700; width:80px; }
+  .badge{ font-weight:800; padding:4px 8px; border-radius:8px; margin-left:auto; font-size:13px; }
+  .badge.best{ background:#065f46; color:#bff7e8; }
+  .badge.inacc{ background:#7c2d12; color:#ffd7d0;}
+  .badge.blunder{ background:#7f1d1d; color:#ffdcdc;}
+  textarea{ width:100%; min-height:140px; background:#07101a; color:#e6eef6; border-radius:6px; padding:8px; font-family:monospace; border:1px solid #16222b;}
+  input[type=number]{ background:#07101a; color:#e6eef6; border-radius:6px; padding:6px; border:1px solid #16222b;}
+  .eval-big{ font-size:20px; font-weight:800; color:#fef3c7; }
+  .pv-box{ background:#0b1116; padding:8px; border-radius:8px; margin-top:8px; min-height:48px; font-family:monospace; font-size:13px; color:#dbeafe;}
 </style>
 </head>
-
 <body>
+  <div class="wrap">
+    
+    <!-- LEFT: BOARD -->
+    <div class="card" id="boardWrap">
+      <div style="display:flex; justify-content:space-between; width:100%;">
+        <strong>Board</strong>
+        <div class="muted" id="sideToMove">White to move</div>
+      </div>
 
-<div class="card">
-    <h2>Register</h2>
+      <div id="board"></div>
 
-    <label>Name</label>
-    <input type="text" placeholder="Enter your name" required />
+      <div class="controls-row">
+        <button class="btn" id="startBtn">|&lt;</button>
+        <button class="btn" id="prevBtn">&lt;</button>
+        <button class="btn" id="playBtn">Play</button>
+        <button class="btn" id="nextBtn">&gt;</button>
+        <button class="btn" id="endBtn">&gt;|</button>
+      </div>
+    </div>
 
-    <label>Age</label>
-    <input type="number" placeholder="Enter your age" required />
+    <!-- MIDDLE: MOVES + CHART -->
+    <div class="card">
+      <strong>Moves</strong>
+      <div id="movesList"></div>
+      <canvas id="evalChart" height="160"></canvas>
+    </div>
 
-    <label>Mobile Number</label>
-    <input type="tel" placeholder="Enter mobile number" required />
+    <!-- RIGHT: ANALYSIS -->
+    <div class="card">
+      <strong>Analyze PGN</strong>
+      <textarea id="pgnInput" placeholder="Paste PGN here…"></textarea>
 
-    <label>Email</label>
-    <input type="email" placeholder="Enter email" required />
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <label class="muted">Depth:
+          <input id="depthInput" type="number" value="14" min="8" max="26" />
+        </label>
+        <button class="btn" id="analyzeBtn">Analyze</button>
+      </div>
 
-    <label>Password</label>
-    <input type="password" placeholder="Create password" required />
+      <div style="margin-top:10px;">
+        <div class="muted">Current Eval</div>
+        <div id="currentEval" class="eval-big">—</div>
 
-    <button>Submit</button>
-</div>
+        <div class="muted" style="margin-top:8px;">Best Move</div>
+        <div id="bestMove" style="font-weight:800;font-size:16px;">—</div>
 
+        <div class="pv-box" id="pvBox">PV will appear here</div>
+
+        <pre id="engineOut" style="max-height:150px;overflow:auto;background:#07101a;padding:8px;border-radius:6px;margin-top:10px;color:#9fb0c1;"></pre>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+/* STOCKFISH SETUP */
+let engine = STOCKFISH();
+engine.onmessage = (e)=>{
+  const line = typeof e === "string" ? e : e.data;
+  document.getElementById("engineOut").textContent += line + "\\n";
+  window.dispatchEvent(new CustomEvent("sf-line",{detail:line}));
+};
+function send(c){ engine.postMessage(c); }
+
+/* GAME SETUP */
+let game = new Chess();
+let moveHistory = [];
+let analysisResults = [];
+let ground = Chessground(document.getElementById("board"), { fen: game.fen() });
+
+function refreshBoard(){
+  ground.set({fen: game.fen()});
+  document.getElementById("sideToMove").textContent = game.turn()==="w"?"White to move":"Black to move";
+}
+
+/* MOVE LIST UI */
+function buildMoveHistory(){
+  moveHistory = [];
+  const hist = game.history({verbose:true});
+  const tmp = new Chess();
+  for(let m of hist){
+    tmp.move(m);
+    moveHistory.push({san:m.san, fen:tmp.fen()});
+  }
+}
+
+/* RENDER MOVE LIST */
+function renderMoves(){
+  let list = document.getElementById("movesList");
+  list.innerHTML="";
+  moveHistory.forEach((m,i)=>{
+    let row = document.createElement("div");
+    row.className="move-row";
+    row.textContent = (i+1)+". "+m.san;
+    row.onclick = ()=>jump(i);
+    list.appendChild(row);
+  });
+}
+
+/* JUMP TO MOVE */
+function jump(i){
+  game.reset();
+  for(let x=0;x<=i;x++) game.move(moveHistory[x].san);
+  refreshBoard();
+  let info = analysisResults[i];
+  if(info){ showAnalysis(info); drawPV(info.pv); }
+}
+
+/* DRAW PV (ARROW) */
+function drawPV(pv){
+  if(!pv) return;
+  let mv = pv.split(" ")[0];
+  let from = mv.slice(0,2), to = mv.slice(2,4);
+  ground.set({lastMove:[from,to]});
+}
+
+/* SHOW ANALYSIS INFO */
+function showAnalysis(info){
+  document.getElementById("currentEval").textContent = info.bestEval===null?"—":info.bestEval+" cp";
+  document.getElementById("bestMove").textContent = info.bestMove || "—";
+  document.getElementById("pvBox").textContent = info.pv || "—";
+}
+
+/* ANALYZE USING STOCKFISH */
+function analyzeAll(depth){
+  send("uci");
+  send("isready");
+  send("ucinewgame");
+
+  analysisResults = [];
+
+  (async()=>{
+    for(let i=0;i<moveHistory.length;i++){
+      let fen = moveHistory[i].fen;
+      let buf = [];
+
+      let onLine = (e)=>buf.push(e.detail);
+      window.addEventListener("sf-line", onLine);
+
+      send("position fen "+fen);
+      send("go depth "+depth);
+
+      let result = await new Promise((resolve)=>{
+        let handler = (e)=>{
+          if(e.detail.startsWith("bestmove")){
+            window.removeEventListener("sf-line", handler);
+            window.removeEventListener("sf-line", onLine);
+
+            let parsed = parseLines(buf);
+            let bestMove = e.detail.split(" ")[1];
+            resolve({
+              bestEval: parsed.evalCp,
+              pv: parsed.pv,
+              bestMove,
+              raw: buf.join("\\n")
+            });
+          }
+        };
+        window.addEventListener("sf-line", handler);
+      });
+
+      analysisResults[i]=result;
+      updateChart();
+    }
+    showAnalysis(analysisResults[analysisResults.length-1]);
+  })();
+}
+
+function parseLines(lines){
+  for(let i=lines.length-1;i>=0;i--){
+    let m = lines[i].match(/score (cp|mate) (-?\\d+).* pv (.*)/);
+    if(m){
+      return {
+        evalCp: m[1]==="cp"?parseInt(m[2]):9999,
+        pv: m[3]
+      };
+    }
+  }
+  return {evalCp:null, pv:null};
+}
+
+/* CHART */
+let chart = new Chart(document.getElementById("evalChart"),{
+  type:"line",
+  data:{labels:[],datasets:[{data:[],fill:true,tension:0.2}]},
+  options:{plugins:{legend:{display:false}},scales:{x:{display:false}}}
+});
+function updateChart(){
+  let evals = analysisResults.map(r=>r? r.bestEval:0);
+  chart.data.labels = evals.map((_,i)=>i+1);
+  chart.data.datasets[0].data = evals;
+  chart.update();
+}
+
+/* BUTTONS */
+document.getElementById("analyzeBtn").onclick = ()=>{
+  let pgn = document.getElementById("pgnInput").value.trim();
+  let depth = parseInt(document.getElementById("depthInput").value);
+  game.load_pgn(pgn);
+  buildMoveHistory();
+  renderMoves();
+  analyzeAll(depth);
+};
+
+document.getElementById("startBtn").onclick = ()=>{game.reset(); refreshBoard();};
+document.getElementById("prevBtn").onclick = ()=>{};
+document.getElementById("nextBtn").onclick = ()=>{};
+document.getElementById("endBtn").onclick = ()=>{};
+document.getElementById("playBtn").onclick = ()=>{};
+
+refreshBoard();
+</script>
 </body>
 </html>
