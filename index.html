@@ -13,14 +13,13 @@
             overflow: hidden; /* Scroll bars hatane ke liye */
             touch-action: none; /* Mobile par double tap zoom rokne ke liye */
         }
-
         canvas {
             display: block;
             width: 100%;
             height: 100%;
         }
 
-        /* ========== MENU OVERLAY ========== */
+        /* ===== MENU OVERLAY ===== */
         #menuOverlay {
             position: fixed;
             inset: 0;
@@ -32,7 +31,7 @@
         }
 
         .menu-box {
-            background: white;
+            background: #fff;
             padding: 22px 30px;
             border-radius: 14px;
             text-align: center;
@@ -54,13 +53,19 @@
             border-radius: 8px;
             border: none;
             cursor: pointer;
-            background: #4caf50;
-            color: white;
+            color: #fff;
         }
 
-        /* Create Room button color */
+        #btnSolo {
+            background: #4caf50;
+        }
+
         #btnCreate {
             background: #2196f3;
+        }
+
+        #btnJoin {
+            background: #ff9800;
         }
 
         .join-row {
@@ -76,35 +81,27 @@
             border: 1px solid #ccc;
         }
 
-        #btnJoin {
-            background: #ff9800;
-            color: white;
-        }
-
         #roomInfo {
-            margin-top: 12px;
+            margin-top: 10px;
             font-size: 14px;
             color: #222;
         }
     </style>
-
 </head>
 <body>
 
-<!-- ========== GAME CANVAS ========== -->
 <canvas id="gameCanvas"></canvas>
 
-
-<!-- ========== START MENU UI ========== -->
+<!-- ===== START MENU ===== -->
 <div id="menuOverlay">
     <div class="menu-box">
         <h1>Flappy</h1>
 
-        <button id="btnSolo">Play Alone</button>
+        <button id="btnSolo">Solo</button>
         <button id="btnCreate">Create Room</button>
 
         <div class="join-row">
-            <input id="roomCodeInput" maxlength="6" placeholder="Room code">
+            <input id="roomCodeInput" maxlength="6" placeholder="Room code" />
             <button id="btnJoin">Join</button>
         </div>
 
@@ -112,12 +109,9 @@
     </div>
 </div>
 
-
-<!-- Game logic -->
+<!-- SCRIPT ORDER: pehle game, phir menu, phir multiplayer -->
 <script src="game.js"></script>
-
-<!-- Menu logic -->
 <script src="menu.js"></script>
-
+<script src="multiplayer.js"></script>
 </body>
 </html>

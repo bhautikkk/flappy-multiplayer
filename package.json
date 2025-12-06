@@ -1,0 +1,24 @@
+{
+  "name": "my-website",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhautikkk/login.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bhautikkk/login/issues"
+  },
+  "homepage": "https://github.com/bhautikkk/login#readme",
+  "dependencies": {
+    "express": "^4.21.1",
+    "ws": "^8.18.3"
+  }
+}
