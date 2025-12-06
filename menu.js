@@ -1,48 +1,77 @@
-// ===================== MENU ELEMENTS =====================
-const menu = document.getElementById("menuOverlay");
-const btnSolo = document.getElementById("btnSolo");
-const btnCreate = document.getElementById("btnCreate");
-const btnJoin = document.getElementById("btnJoin");
-const roomCodeInput = document.getElementById("roomCodeInput");
-const roomInfo = document.getElementById("roomInfo");
+// ======================== MENU ELEMENTS ===========================
+const menuOverlay = document.getElementById("menuOverlay");
+const soloBtn = document.getElementById("soloBtn");
+const createBtn = document.getElementById("createBtn");
+const joinBtn = document.getElementById("joinBtn");
+const roomInput = document.getElementById("roomInput");
 
-// ===================== Generate Room Code =====================
-function generateRoomCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+// Show menu when page loads
+menuOverlay.style.display = "flex";
+
+// Always disable gameplay while menu is visible
+function freezeGame() {
+    state.current = state.getReady;
 }
 
-// ===================== SOLO BUTTON =====================
-btnSolo.onclick = () => {
-    menu.style.display = "none";
-    if (typeof startSolo === "function") startSolo();
+// Freeze game initially
+freezeGame();
+
+// ======================== SOLO PLAY ================================
+soloBtn.onclick = () => {
+    menuOverlay.style.display = "none"; 
+    state.current = state.getReady;   // Start normal solo game
 };
 
-// ===================== CREATE ROOM =====================
-btnCreate.onclick = () => {
-    const code = generateRoomCode();
+// ======================== WEBSOCKET CONFIG ==========================
+let ws = null;
+let roomCode = "";
+const WS_URL = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+    ? "ws://localhost:8080"
+    : "wss://" + location.hostname;
 
-    // Code display
-    alert("Room Code: " + code);
-    roomInfo.textContent = "Room Code: " + code;
+// Connect WebSocket only once
+function connectWS() {
+    if (ws) return;
+    ws = new WebSocket(WS_URL);
 
-    // Host ko yahin rukna है (कोई auto-start नहीं)
-    // जब host चाहे तब नीचे वाला button दबाकर गेम शुरू कर सकता है
+    ws.onopen = () => console.log("WS Connected");
+
+    ws.onmessage = (msg) => {
+        let data = JSON.parse(msg.data);
+
+        if (data.type === "room_created") {
+            alert("Room Code: " + data.code);
+            roomCode = data.code;
+        }
+
+        if (data.type === "start_game") {
+            menuOverlay.style.display = "none";
+            state.current = state.getReady;
+        }
+    };
+}
+
+// ======================== CREATE ROOM ===============================
+createBtn.onclick = () => {
+    freezeGame();
+    connectWS();
+
+    ws.send(JSON.stringify({ type: "create_room" }));
 };
 
-// ===================== JOIN ROOM =====================
-btnJoin.onclick = () => {
-    const code = roomCodeInput.value.trim();
+// ======================== JOIN ROOM =================================
+joinBtn.onclick = () => {
+    freezeGame();
+    connectWS();
 
-    if (code.length !== 6) {
-        roomInfo.textContent = "Enter a valid 6-digit code!";
+    const code = roomInput.value.trim();
+    if (!code) {
+        alert("Enter a room code!");
         return;
     }
 
-    roomInfo.textContent = "Joining room: " + code;
-
-    // Join करने वाले का game तुरंत start होगा
-    if (typeof startMulti === "function") startMulti();
-
-    // Menu hide
-    menu.style.display = "none";
+    ws.send(JSON.stringify({
+        type: "join_room",
+        code: code
+    }));
 };

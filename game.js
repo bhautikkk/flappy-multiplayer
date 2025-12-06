@@ -1,19 +1,18 @@
+// ======================= CANVAS SETUP ===========================
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// --- SCREEN RESIZING ---
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas(); // Initial call
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
-// --- VARIABLES ---
+// ======================= GAME VARIABLES =========================
 let frames = 0;
 const DEGREE = Math.PI / 180;
 
-// --- GAME STATE ---
 const state = {
     current: 0,
     getReady: 0,
@@ -21,32 +20,38 @@ const state = {
     over: 2
 };
 
-// --- CONTROLS ---
+// ======================= FIXED ACTION() =========================
 function action(evt) {
-    // Prevent default touch behavior (scrolling)
-    if (evt.type === 'touchstart') evt.preventDefault();
+    if (evt.type === "touchstart") evt.preventDefault();
+
+    // ❗ FIX: menu visible = ignore game taps
+    const menu = document.getElementById("menuOverlay");
+    if (menu && menu.style.display !== "none") {
+        return;
+    }
 
     switch (state.current) {
         case state.getReady:
             state.current = state.game;
             break;
+
         case state.game:
             bird.flap();
             break;
+
         case state.over:
             resetGame();
             break;
     }
 }
 
-// Support for Click, Touch, and Spacebar
 window.addEventListener("mousedown", action);
 window.addEventListener("touchstart", action, { passive: false });
 window.addEventListener("keydown", (e) => {
     if (e.code === "Space") action(e);
 });
 
-// --- BIRD OBJECT ---
+// ======================= BIRD ===========================
 const bird = {
     x: 50,
     y: 150,
@@ -57,52 +62,48 @@ const bird = {
     jump: 4.6,
     rotation: 0,
 
-    draw: function () {
+    draw() {
         ctx.save();
-        // Bird ko thoda screen ke left side mein rakhte hain relative to width
-        let drawX = Math.min(canvas.width * 0.2, 100);
 
+        let drawX = Math.min(canvas.width * 0.2, 100);
         ctx.translate(drawX, this.y);
         ctx.rotate(this.rotation);
 
-        // Body
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#FFD700"; 
         ctx.fillRect(-this.w / 2, -this.h / 2, this.w, this.h);
+
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#000";
         ctx.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h);
 
-        // Eye
         ctx.fillStyle = "#FFF";
         ctx.fillRect(2, -8, 10, 10);
         ctx.strokeRect(2, -8, 10, 10);
+
         ctx.fillStyle = "#000";
         ctx.fillRect(8, -5, 2, 2);
 
-        // Beak
-        ctx.fillStyle = "#FF4500";
+        ctx.fillStyle = "#FF4500"; 
         ctx.fillRect(6, 4, 14, 8);
         ctx.strokeRect(6, 4, 14, 8);
 
         ctx.restore();
     },
 
-    flap: function () {
+    flap() {
         this.speed = -this.jump;
     },
 
-    update: function () {
-        // Bird starts at 1/3rd of screen height or center
+    update() {
         let startY = canvas.height / 2 - 50;
 
-        if (state.current == state.getReady) {
+        if (state.current === state.getReady) {
             this.y = startY - 10 * Math.cos(frames * 0.1);
             this.rotation = 0;
         } else {
             this.speed += this.gravity;
             this.y += this.speed;
 
-            // Rotation Logic
             if (this.speed < this.jump / 2) {
                 this.rotation = -25 * DEGREE;
             } else {
@@ -110,10 +111,9 @@ const bird = {
                 if (this.rotation > 90 * DEGREE) this.rotation = 90 * DEGREE;
             }
 
-            // Floor Collision
             if (this.y + this.h / 2 >= canvas.height - fg.h) {
                 this.y = canvas.height - fg.h - this.h / 2;
-                if (state.current == state.game) {
+                if (state.current === state.game) {
                     state.current = state.over;
                 }
             }
@@ -121,13 +121,12 @@ const bird = {
     }
 };
 
-// --- BACKGROUND ---
+// ======================= BACKGROUND ===========================
 const bg = {
-    draw: function () {
+    draw() {
         ctx.fillStyle = "#70c5ce";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw some clouds
         ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
         ctx.beginPath();
         ctx.arc(100, canvas.height - 200, 30, 0, Math.PI * 2);
@@ -137,12 +136,13 @@ const bg = {
     }
 };
 
-// --- FOREGROUND (Ground) ---
+// ======================= GROUND ===========================
 const fg = {
-    h: 100, // Thoda uncha ground mobile ke liye
+    h: 100,
     x: 0,
     dx: 2,
-    draw: function () {
+
+    draw() {
         ctx.fillStyle = "#ded895";
         ctx.fillRect(0, canvas.height - this.h, canvas.width, this.h);
 
@@ -155,148 +155,130 @@ const fg = {
         ctx.lineTo(canvas.width, canvas.height - this.h + 15);
         ctx.stroke();
     },
-    update: function () {
-        if (state.current == state.game) {
+
+    update() {
+        if (state.current === state.game) {
             this.x = (this.x - this.dx) % 20;
         }
     }
 };
 
-// --- PIPES ---
+// ======================= PIPES ===========================
 const pipes = {
     position: [],
-    w: 60,  // Thoda chauda pipe
-    gap: 120, // Mobile par easy khelne ke liye gap
-    dx: 3, // Thodi speed badhayi hai smooth feel ke liye
+    w: 60,
+    gap: 120,
+    dx: 3,
 
-    draw: function () {
-        for (let i = 0; i < this.position.length; i++) {
-            let p = this.position[i];
-            let topY = p.y;
-            let bottomY = p.y + p.h + this.gap;
+    draw() {
+        for (let p of this.position) {
+            let bottomY = p.h + this.gap;
 
-            // Pipe Body
             ctx.fillStyle = "#73bf2e";
-            ctx.fillRect(p.x, topY, this.w, p.h); // Top
-            ctx.fillRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h); // Bottom
 
-            // Borders
+            ctx.fillRect(p.x, 0, this.w, p.h);
+            ctx.fillRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h);
+
             ctx.strokeStyle = "#555";
             ctx.lineWidth = 2;
-            ctx.strokeRect(p.x, topY, this.w, p.h);
+            ctx.strokeRect(p.x, 0, this.w, p.h);
             ctx.strokeRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h);
-
-            // Caps
-            let capHeight = 25;
-            // Top Cap
-            ctx.fillStyle = "#73bf2e";
-            ctx.fillRect(p.x - 4, topY + p.h - capHeight, this.w + 8, capHeight);
-            ctx.strokeRect(p.x - 4, topY + p.h - capHeight, this.w + 8, capHeight);
-            // Bottom Cap
-            ctx.fillRect(p.x - 4, bottomY, this.w + 8, capHeight);
-            ctx.strokeRect(p.x - 4, bottomY, this.w + 8, capHeight);
         }
     },
 
-    update: function () {
+    update() {
         if (state.current !== state.game) return;
 
-        // Spawning Logic (distance based on screen width)
-        // Har 100 frames par nahi, balki distance ke hisab se spawn karenge
-        if (frames % 100 == 0) {
-            // Pipe height calculation based on screen height
-            let minPipeH = canvas.height * 0.1;
-            let maxPipeH = canvas.height - fg.h - this.gap - minPipeH;
-            let randomH = Math.floor(Math.random() * (maxPipeH - minPipeH + 1) + minPipeH);
+        if (frames % 100 === 0) {
+            let minH = canvas.height * 0.1;
+            let maxH = canvas.height - fg.h - this.gap - minH;
+            let h = Math.floor(Math.random() * (maxH - minH + 1) + minH);
 
-            this.position.push({
-                x: canvas.width,
-                y: 0,
-                h: randomH
-            });
+            this.position.push({ x: canvas.width, h });
         }
 
         for (let i = 0; i < this.position.length; i++) {
             let p = this.position[i];
             p.x -= this.dx;
 
-            // Collision Variables
-            let birdX = Math.min(canvas.width * 0.2, 100); // Bird ki fixed screen position
+            let birdX = Math.min(canvas.width * 0.2, 100);
 
-            // Collision Logic
-            // 1. Top Pipe
-            if (birdX + bird.w / 2 > p.x && birdX - bird.w / 2 < p.x + this.w &&
-                bird.y - bird.h / 2 < p.h) {
-                state.current = state.over;
-            }
-            // 2. Bottom Pipe
-            if (birdX + bird.w / 2 > p.x && birdX - bird.w / 2 < p.x + this.w &&
-                bird.y + bird.h / 2 > p.h + this.gap) {
+            if (
+                birdX + bird.w / 2 > p.x &&
+                birdX - bird.w / 2 < p.x + this.w &&
+                (bird.y - bird.h / 2 < p.h ||
+                    bird.y + bird.h / 2 > p.h + this.gap)
+            ) {
                 state.current = state.over;
             }
 
             if (p.x + this.w <= 0) {
                 this.position.shift();
-                score.value += 1;
+                score.value++;
                 score.best = Math.max(score.value, score.best);
             }
         }
     }
 };
 
-// --- SCORE ---
+// ======================= SCORE ===========================
 const score = {
-    best: localStorage.getItem('flappy_full_best') || 0,
+    best: localStorage.getItem("flappy_full_best") || 0,
     value: 0,
 
-    draw: function () {
+    draw() {
         ctx.fillStyle = "#FFF";
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
         ctx.textAlign = "center";
 
-        if (state.current == state.game) {
+        if (state.current === state.game) {
             ctx.font = "bold 60px Arial";
             ctx.fillText(this.value, canvas.width / 2, 100);
             ctx.strokeText(this.value, canvas.width / 2, 100);
-        } else if (state.current == state.over) {
+        }
 
-            // Box background
-            let boxW = 300;
-            let boxH = 250;
-            let boxX = canvas.width / 2 - boxW / 2;
-            let boxY = canvas.height / 2 - boxH / 2;
+        if (state.current === state.over) {
+            let w = 300, h = 250;
+            let x = canvas.width / 2 - w / 2;
+            let y = canvas.height / 2 - h / 2;
 
-            ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-            ctx.fillRect(boxX, boxY, boxW, boxH);
+            ctx.fillStyle = "rgba(255,255,255,0.9)";
+            ctx.fillRect(x, y, w, h);
+
             ctx.strokeStyle = "#333";
-            ctx.strokeRect(boxX, boxY, boxW, boxH);
+            ctx.strokeRect(x, y, w, h);
 
             ctx.fillStyle = "#000";
             ctx.font = "30px Impact";
-            ctx.fillText("SCORE", canvas.width / 2, boxY + 50);
+            ctx.fillText("SCORE", canvas.width / 2, y + 50);
+
             ctx.font = "50px Impact";
-            ctx.fillText(this.value, canvas.width / 2, boxY + 100);
+            ctx.fillText(this.value, canvas.width / 2, y + 100);
 
             ctx.fillStyle = "#e8802e";
             ctx.font = "25px Impact";
-            ctx.fillText("BEST: " + this.best, canvas.width / 2, boxY + 150);
-            localStorage.setItem('flappy_full_best', this.best);
+            ctx.fillText("BEST: " + this.best, canvas.width / 2, y + 150);
+
+            localStorage.setItem("flappy_full_best", this.best);
 
             ctx.fillStyle = "#555";
             ctx.font = "20px Arial";
-            ctx.fillText("Tap to Restart", canvas.width / 2, boxY + 220);
+            ctx.fillText("Tap to Restart", canvas.width / 2, y + 220);
+        }
 
-        } else if (state.current == state.getReady) {
+        if (state.current === state.getReady) {
             ctx.fillStyle = "#000";
             ctx.font = "40px Impact";
             ctx.fillText("GET READY", canvas.width / 2, canvas.height / 2 - 50);
+
             ctx.font = "20px Arial";
             ctx.fillText("Tap to Fly", canvas.width / 2, canvas.height / 2);
         }
     }
 };
 
+// ======================= RESET ===========================
 function resetGame() {
     bird.speed = 0;
     bird.rotation = 0;
@@ -306,6 +288,7 @@ function resetGame() {
     state.current = state.getReady;
 }
 
+// ======================= LOOP ===========================
 function draw() {
     bg.draw();
     pipes.draw();
