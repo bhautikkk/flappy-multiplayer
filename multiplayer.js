@@ -20,10 +20,13 @@ const originalDraw = window.draw;
 // WS URL (local + live dono ke liye)
 // ================================
 function getWsUrl() {
+    // Local par run kare to localhost:8080
     if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
         return "ws://localhost:8080";
     }
+    // Render / internet par:
     const proto = location.protocol === "https:" ? "wss://" : "ws://";
+    // yahan host automatically "flappy-multiplayer.onrender.com" hoga live pe
     return proto + location.host;
 }
 
