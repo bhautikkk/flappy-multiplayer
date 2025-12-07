@@ -6,7 +6,7 @@ const createBtn = document.getElementById("btnCreate");
 const joinBtn = document.getElementById("btnJoin");
 const roomInput = document.getElementById("roomCodeInput");
 
-// Agar kuch galat ho to console me error dikhe (but game na toote)
+// Basic safety check
 if (!menuOverlay || !soloBtn || !createBtn || !joinBtn || !roomInput) {
     console.error("Menu elements missing, check IDs in index.html");
 }
@@ -47,12 +47,15 @@ const WS_URL = (location.hostname === "localhost" || location.hostname === "127.
 
 // Connect WebSocket only once
 function connectWS() {
-    if (ws && ws.readyState === WebSocket.OPEN) return;
-    if (ws && ws.readyState === WebSocket.CONNECTING) return;
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
 
     ws = new WebSocket(WS_URL);
 
-    ws.onopen = () => console.log("WS Connected");
+    ws.onopen = () => {
+        console.log("WS Connected");
+    };
 
     ws.onmessage = (msg) => {
         let data;
@@ -74,22 +77,52 @@ function connectWS() {
                 state.current = state.getReady;
             }
         }
+
+        if (data.type === "error") {
+            alert(data.message || "Error from server");
+        }
     };
 
     ws.onerror = (e) => {
         console.error("WS error:", e);
     };
+
+    ws.onclose = () => {
+        console.log("WS closed");
+    };
+}
+
+// Helper: message sirf OPEN hone ke baad send kare
+function sendWhenOpen(obj) {
+    connectWS();
+
+    function actuallySend() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(obj));
+        } else {
+            console.error("WS not open, cannot send", obj);
+        }
+    }
+
+    if (!ws) return;
+
+    if (ws.readyState === WebSocket.OPEN) {
+        actuallySend();
+    } else {
+        // wait for open, then send once
+        const handler = () => {
+            ws.removeEventListener("open", handler);
+            actuallySend();
+        };
+        ws.addEventListener("open", handler);
+    }
 }
 
 // ======================== CREATE ROOM ===============================
 if (createBtn) {
     createBtn.onclick = () => {
         freezeGame();
-        connectWS();
-
-        if (!ws) return;
-
-        ws.send(JSON.stringify({ type: "create_room" }));
+        sendWhenOpen({ type: "create_room" });
     };
 }
 
@@ -97,7 +130,6 @@ if (createBtn) {
 if (joinBtn) {
     joinBtn.onclick = () => {
         freezeGame();
-        connectWS();
 
         const code = roomInput ? roomInput.value.trim() : "";
         if (!code) {
@@ -105,11 +137,9 @@ if (joinBtn) {
             return;
         }
 
-        if (!ws) return;
-
-        ws.send(JSON.stringify({
+        sendWhenOpen({
             type: "join_room",
             code: code
-        }));
+        });
     };
 }
