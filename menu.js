@@ -1,145 +1,18 @@
-// ======================== MENU ELEMENTS ===========================
-// IDs same as index.html
-const menuOverlay = document.getElementById("menuOverlay");
-const soloBtn = document.getElementById("btnSolo");
-const createBtn = document.getElementById("btnCreate");
-const joinBtn = document.getElementById("btnJoin");
-const roomInput = document.getElementById("roomCodeInput");
+// ===== MENU HANDLING (only UI) =====
+const menu = document.getElementById("menuOverlay");
+const btnSolo = document.getElementById("btnSolo");
+const btnCreate = document.getElementById("btnCreate");
+const btnJoin = document.getElementById("btnJoin");
+const roomCodeInput = document.getElementById("roomCodeInput");
+const roomInfo = document.getElementById("roomInfo");
 
-// Basic safety check
-if (!menuOverlay || !soloBtn || !createBtn || !joinBtn || !roomInput) {
-    console.error("Menu elements missing, check IDs in index.html");
-}
+// Global flags jisse game.js ko pata chale
+window.multiplayerMode = "solo";   // 'solo' | 'online'
+window.multiplayerRole = null;     // 'host' | 'guest'
 
-// ======================== INITIAL STATE ===========================
-
-// Page load par menu dikhana hai
-if (menuOverlay) {
-    menuOverlay.style.display = "flex";
-}
-
-// Game ko freeze rakhna jab tak menu hai
-function freezeGame() {
-    if (typeof state !== "undefined") {
-        state.current = state.getReady;
-    }
-}
-
-// Start me freeze
-freezeGame();
-
-// ======================== SOLO PLAY ================================
-if (soloBtn) {
-    soloBtn.onclick = () => {
-        if (menuOverlay) menuOverlay.style.display = "none";
-        if (typeof state !== "undefined") {
-            state.current = state.getReady;   // normal solo game
-        }
-    };
-}
-
-// ======================== WEBSOCKET CONFIG ==========================
-let ws = null;
-let roomCode = "";
-const WS_URL = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-    ? "ws://localhost:8080"
-    : "wss://" + location.hostname;
-
-// Connect WebSocket only once
-function connectWS() {
-    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-        return;
-    }
-
-    ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
-        console.log("WS Connected");
-    };
-
-    ws.onmessage = (msg) => {
-        let data;
-        try {
-            data = JSON.parse(msg.data);
-        } catch (e) {
-            console.error("Bad WS message", msg.data);
-            return;
-        }
-
-        if (data.type === "room_created") {
-            roomCode = data.code;
-            alert("Room Code: " + data.code);
-        }
-
-        if (data.type === "start_game") {
-            if (menuOverlay) menuOverlay.style.display = "none";
-            if (typeof state !== "undefined") {
-                state.current = state.getReady;
-            }
-        }
-
-        if (data.type === "error") {
-            alert(data.message || "Error from server");
-        }
-    };
-
-    ws.onerror = (e) => {
-        console.error("WS error:", e);
-    };
-
-    ws.onclose = () => {
-        console.log("WS closed");
-    };
-}
-
-// Helper: message sirf OPEN hone ke baad send kare
-function sendWhenOpen(obj) {
-    connectWS();
-
-    function actuallySend() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(obj));
-        } else {
-            console.error("WS not open, cannot send", obj);
-        }
-    }
-
-    if (!ws) return;
-
-    if (ws.readyState === WebSocket.OPEN) {
-        actuallySend();
-    } else {
-        // wait for open, then send once
-        const handler = () => {
-            ws.removeEventListener("open", handler);
-            actuallySend();
-        };
-        ws.addEventListener("open", handler);
-    }
-}
-
-// ======================== CREATE ROOM ===============================
-if (createBtn) {
-    createBtn.onclick = () => {
-        freezeGame();
-        sendWhenOpen({ type: "create_room" });
-    };
-}
-
-// ======================== JOIN ROOM =================================
-if (joinBtn) {
-    joinBtn.onclick = () => {
-        freezeGame();
-
-        const code = roomInput ? roomInput.value.trim() : "";
-        if (!code) {
-            alert("Enter a room code!");
-            return;
-        }
-
-        sendWhenOpen({
-            type: "join_room",
-            code: code
-        });
-    };
-}
+// SOLO: sirf menu hide, game.js normal physics se chalega
+btnSolo.onclick = () => {
+  window.multiplayerMode = "solo";
+  window.multiplayerRole = null;
+  menu.style.display = "none";
+};

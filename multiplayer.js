@@ -1,233 +1,125 @@
-// ================================
-// BASIC MULTIPLAYER STATE
-// ================================
-let mpMode = "solo"; // "solo" | "multi"
-let socket = null;
+// ===== MULTIPLAYER (WebSocket + Rooms) =====
+(function () {
+  // Same host pe connect karo (Render + local dono me chalega)
+  const WS_URL =
+    (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
 
-let otherBirdY = null;
-let otherScore = 0;
-let otherPhase = 0;
-let otherIsDead = false;
-let localDead = false;
-let restartTriggered = false;
+  console.log("Connecting to", WS_URL);
+  const socket = new WebSocket(WS_URL);
 
-// original functions save
-const originalScoreDraw = score.draw;
-const originalUpdate = window.update;
-const originalDraw = window.draw;
+  const menu = document.getElementById("menuOverlay");
+  const btnSolo = document.getElementById("btnSolo");
+  const btnCreate = document.getElementById("btnCreate");
+  const btnJoin = document.getElementById("btnJoin");
+  const roomCodeInput = document.getElementById("roomCodeInput");
+  const roomInfo = document.getElementById("roomInfo");
 
-// ================================
-// WS URL (local + live dono ke liye)
-// ================================
-function getWsUrl() {
-    // Local par run kare to localhost:8080
-    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-        return "ws://localhost:8080";
-    }
-    // Render / internet par:
-    const proto = location.protocol === "https:" ? "wss://" : "ws://";
-    // yahan host automatically "flappy-multiplayer.onrender.com" hoga live pe
-    return proto + location.host;
-}
+  let currentRoomCode = null;
 
-// ================================
-// CONNECT WEBSOCKET
-// ================================
-function connectWebSocket() {
-    if (socket && socket.readyState === WebSocket.OPEN) return;
+  socket.addEventListener("open", () => {
+    console.log("WebSocket OPEN");
+    roomInfo.textContent = "";
+  });
 
-    socket = new WebSocket(getWsUrl());
+  socket.addEventListener("error", (e) => {
+    console.error("WebSocket ERROR", e);
+    alert("Connection error. Try again later.");
+  });
 
-    socket.onopen = () => {
-        console.log("Connected to WS");
-    };
+  socket.addEventListener("close", () => {
+    console.log("WebSocket CLOSED");
+  });
 
-    socket.onmessage = (evt) => {
-        try {
-            const data = JSON.parse(evt.data);
-            if (data.type === "state") {
-                otherBirdY = data.y;
-                otherScore = data.score;
-                otherPhase = data.phase;
-                otherIsDead = data.dead;
-            }
-        } catch (e) {
-            console.error("WS message parse error", e);
-        }
-    };
+  // ---- Buttons ----
 
-    socket.onclose = () => {
-        console.log("WS disconnected");
-    };
-}
+  // SOLO handler ko override mat karo (menu.js ne set kar diya)
+  // Yahan sirf Create/Join handle kar rahe hain
 
-// ================================
-// SEND STATE TO OTHERS
-// ================================
-function sendState() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({
-        type: "state",
-        y: bird.y,
-        score: score.value,
-        phase: state.current,
-        dead: localDead
-    }));
-}
-
-// ================================
-// DRAW GHOST BIRD
-// ================================
-function drawOtherPlayer() {
-    if (mpMode === "solo") return;
-    if (otherBirdY == null) return;
-    if (otherIsDead) return;
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.fillRect(40, otherBirdY, 34, 24);
-}
-
-// ================================
-// OVERRIDE SCORE.DRAW
-// ================================
-score.draw = function () {
-    // SOLO → original
-    if (mpMode === "solo") {
-        return originalScoreDraw.call(score);
+  btnCreate.onclick = () => {
+    if (socket.readyState !== WebSocket.OPEN) {
+      alert("Not connected to server yet. Wait 1–2 sec and try again.");
+      return;
     }
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    socket.send(JSON.stringify({ type: "create_room" }));
+    roomInfo.textContent = "Creating room...";
+  };
 
-    ctx.fillStyle = "#FFF";
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    ctx.textAlign = "center";
+  btnJoin.onclick = () => {
+    const code = roomCodeInput.value.trim();
 
-    // GAME STATE: top scoreboard
-    if (state.current === state.game) {
-        ctx.font = "bold 32px Arial";
-        ctx.fillText("You: " + score.value, centerX, 60);
-        ctx.strokeText("You: " + score.value, centerX, 60);
-
-        ctx.font = "bold 24px Arial";
-        ctx.fillText("Friend: " + otherScore, centerX, 95);
-        ctx.strokeText("Friend: " + otherScore, centerX, 95);
-        return;
+    if (code.length < 6) {
+      roomInfo.textContent = "Enter 6-digit code";
+      return;
     }
 
-    // MAIN dead, friend alive → spectate
-    if (state.current === state.over && localDead && !otherIsDead) {
-        ctx.fillStyle = "#000";
-        ctx.font = "32px Impact";
-        ctx.fillText("SPECTATING...", centerX, centerY - 30);
-
-        ctx.font = "20px Arial";
-        ctx.fillText("Your score: " + score.value, centerX, centerY + 5);
-        ctx.fillText("Friend: " + otherScore, centerX, centerY + 30);
-        return;
+    if (socket.readyState !== WebSocket.OPEN) {
+      alert("Not connected to server yet. Wait 1–2 sec and try again.");
+      return;
     }
 
-    // DONO dead → final result box
-    if (state.current === state.over && localDead && otherIsDead) {
-        const boxW = 320;
-        const boxH = 220;
-        const boxX = centerX - boxW / 2;
-        const boxY = centerY - boxH / 2;
+    socket.send(
+      JSON.stringify({
+        type: "join_room",
+        code: code,
+      })
+    );
 
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.fillRect(boxX, boxY, boxW, boxH);
-        ctx.strokeStyle = "#333";
-        ctx.strokeRect(boxX, boxY, boxW, boxH);
+    roomInfo.textContent = "Joining room " + code + "...";
+  };
 
-        ctx.fillStyle = "#000";
-        ctx.font = "30px Impact";
-        ctx.fillText("RESULTS", centerX, boxY + 40);
-
-        ctx.font = "22px Arial";
-        ctx.fillText("You: " + score.value, centerX, boxY + 85);
-        ctx.fillText("Friend: " + otherScore, centerX, boxY + 115);
-
-        let msg = "DRAW";
-        if (score.value > otherScore) msg = "YOU WIN!";
-        else if (score.value < otherScore) msg = "YOU LOSE";
-
-        ctx.fillStyle = "#e8802e";
-        ctx.font = "26px Impact";
-        ctx.fillText(msg, centerX, boxY + 160);
-
-        ctx.fillStyle = "#555";
-        ctx.font = "18px Arial";
-        ctx.fillText("New round in a moment...", centerX, boxY + 190);
-
-        if (!restartTriggered) {
-            restartTriggered = true;
-            setTimeout(() => {
-                resetGame();
-                localDead = false;
-                otherIsDead = false;
-                otherBirdY = null;
-                otherScore = 0;
-                otherPhase = 0;
-                restartTriggered = false;
-            }, 2000);
-        }
-        return;
+  // ---- Messages from server ----
+  socket.addEventListener("message", (event) => {
+    let data;
+    try {
+      data = JSON.parse(event.data);
+    } catch (e) {
+      console.error("Bad JSON from server:", event.data);
+      return;
     }
 
-    // Baki sab cases me original
-    return originalScoreDraw.call(score);
-};
+    console.log("WS message:", data);
 
-// ================================
-// OVERRIDE UPDATE & DRAW
-// ================================
-window.update = function () {
-    originalUpdate();
-
-    if (mpMode !== "solo") {
-        if (state.current === state.game) {
-            sendState();
-        } else if (state.current === state.over && !localDead) {
-            localDead = true;
-            sendState();
-        }
+    // ROOM CREATED
+    if (data.type === "room_created") {
+      currentRoomCode = data.code;
+      roomCodeInput.value = currentRoomCode;
+      roomInfo.textContent = "Room Code: " + currentRoomCode;
+      alert("Room Code: " + currentRoomCode);
+      return;
     }
-};
 
-window.draw = function () {
-    originalDraw();
-    drawOtherPlayer();
-};
+    // ERROR (e.g. room not found)
+    if (data.type === "error") {
+      alert(data.message || "Error");
+      roomInfo.textContent = data.message || "Error";
+      return;
+    }
 
-// ================================
-// PUBLIC FUNCTIONS FOR MENU
-// ================================
-window.startSolo = function () {
-    mpMode = "solo";
-    localDead = false;
-    otherIsDead = false;
-    otherBirdY = null;
-    otherScore = 0;
-    otherPhase = 0;
-    restartTriggered = false;
+    // START GAME (both players connected)
+    if (data.type === "start_game") {
+      currentRoomCode = data.code;
+      window.multiplayerMode = "online";
+      window.multiplayerRole = data.role; // 'host' or 'guest'
 
-    document.getElementById("menuOverlay").style.display = "none";
-    resetGame();
-};
+      roomInfo.textContent =
+        "Connected! Room " +
+        currentRoomCode +
+        " (" +
+        window.multiplayerRole +
+        ")";
 
-window.startMulti = function () {
-    mpMode = "multi";
-    localDead = false;
-    otherIsDead = false;
-    otherBirdY = null;
-    otherScore = 0;
-    otherPhase = 0;
-    restartTriggered = false;
+      // menu hide, game.js normal se chalega, multiplayer flags set ho gaye
+      menu.style.display = "none";
+      return;
+    }
 
-    connectWebSocket();
-    document.getElementById("menuOverlay").style.display = "none";
-    resetGame();
-};
+    // Baaki sab game ke sync messages hain
+    if (window.handleMultiplayerMessage) {
+      window.handleMultiplayerMessage(data);
+    }
+  });
 
-console.log("multiplayer.js loaded");
+  // Dusre scripts ko socket access chahiye to:
+  window.multiplayerSocket = socket;
+})();
