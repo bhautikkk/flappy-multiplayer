@@ -20,15 +20,18 @@ const state = {
     over: 2
 };
 
-// ======================= FIXED ACTION() =========================
+// ======================= ACTION (FIXED FOR MOBILE) ==============
 function action(evt) {
-    if (evt.type === "touchstart") evt.preventDefault();
-
-    // ❗ FIX: menu visible = ignore game taps
     const menu = document.getElementById("menuOverlay");
+
+    // 👉 Agar menu dikha hua hai to game input ignore karo
+    // aur default behaviour allow karo (button clicks ke liye)
     if (menu && menu.style.display !== "none") {
         return;
     }
+
+    // Ab yahan aa gaye matlab menu hidden hai, sirf game control chahiye
+    if (evt.type === "touchstart") evt.preventDefault();
 
     switch (state.current) {
         case state.getReady:
@@ -69,7 +72,7 @@ const bird = {
         ctx.translate(drawX, this.y);
         ctx.rotate(this.rotation);
 
-        ctx.fillStyle = "#FFD700"; 
+        ctx.fillStyle = "#FFD700";
         ctx.fillRect(-this.w / 2, -this.h / 2, this.w, this.h);
 
         ctx.lineWidth = 2;
@@ -83,7 +86,7 @@ const bird = {
         ctx.fillStyle = "#000";
         ctx.fillRect(8, -5, 2, 2);
 
-        ctx.fillStyle = "#FF4500"; 
+        ctx.fillStyle = "#FF4500";
         ctx.fillRect(6, 4, 14, 8);
         ctx.strokeRect(6, 4, 14, 8);
 
