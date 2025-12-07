@@ -1,26 +1,42 @@
 // ======================== MENU ELEMENTS ===========================
+// IDs same as index.html
 const menuOverlay = document.getElementById("menuOverlay");
-const soloBtn = document.getElementById("soloBtn");
-const createBtn = document.getElementById("createBtn");
-const joinBtn = document.getElementById("joinBtn");
-const roomInput = document.getElementById("roomInput");
+const soloBtn = document.getElementById("btnSolo");
+const createBtn = document.getElementById("btnCreate");
+const joinBtn = document.getElementById("btnJoin");
+const roomInput = document.getElementById("roomCodeInput");
 
-// Show menu when page loads
-menuOverlay.style.display = "flex";
-
-// Always disable gameplay while menu is visible
-function freezeGame() {
-    state.current = state.getReady;
+// Agar kuch galat ho to console me error dikhe (but game na toote)
+if (!menuOverlay || !soloBtn || !createBtn || !joinBtn || !roomInput) {
+    console.error("Menu elements missing, check IDs in index.html");
 }
 
-// Freeze game initially
+// ======================== INITIAL STATE ===========================
+
+// Page load par menu dikhana hai
+if (menuOverlay) {
+    menuOverlay.style.display = "flex";
+}
+
+// Game ko freeze rakhna jab tak menu hai
+function freezeGame() {
+    if (typeof state !== "undefined") {
+        state.current = state.getReady;
+    }
+}
+
+// Start me freeze
 freezeGame();
 
 // ======================== SOLO PLAY ================================
-soloBtn.onclick = () => {
-    menuOverlay.style.display = "none"; 
-    state.current = state.getReady;   // Start normal solo game
-};
+if (soloBtn) {
+    soloBtn.onclick = () => {
+        if (menuOverlay) menuOverlay.style.display = "none";
+        if (typeof state !== "undefined") {
+            state.current = state.getReady;   // normal solo game
+        }
+    };
+}
 
 // ======================== WEBSOCKET CONFIG ==========================
 let ws = null;
@@ -31,47 +47,69 @@ const WS_URL = (location.hostname === "localhost" || location.hostname === "127.
 
 // Connect WebSocket only once
 function connectWS() {
-    if (ws) return;
+    if (ws && ws.readyState === WebSocket.OPEN) return;
+    if (ws && ws.readyState === WebSocket.CONNECTING) return;
+
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => console.log("WS Connected");
 
     ws.onmessage = (msg) => {
-        let data = JSON.parse(msg.data);
+        let data;
+        try {
+            data = JSON.parse(msg.data);
+        } catch (e) {
+            console.error("Bad WS message", msg.data);
+            return;
+        }
 
         if (data.type === "room_created") {
-            alert("Room Code: " + data.code);
             roomCode = data.code;
+            alert("Room Code: " + data.code);
         }
 
         if (data.type === "start_game") {
-            menuOverlay.style.display = "none";
-            state.current = state.getReady;
+            if (menuOverlay) menuOverlay.style.display = "none";
+            if (typeof state !== "undefined") {
+                state.current = state.getReady;
+            }
         }
+    };
+
+    ws.onerror = (e) => {
+        console.error("WS error:", e);
     };
 }
 
 // ======================== CREATE ROOM ===============================
-createBtn.onclick = () => {
-    freezeGame();
-    connectWS();
+if (createBtn) {
+    createBtn.onclick = () => {
+        freezeGame();
+        connectWS();
 
-    ws.send(JSON.stringify({ type: "create_room" }));
-};
+        if (!ws) return;
+
+        ws.send(JSON.stringify({ type: "create_room" }));
+    };
+}
 
 // ======================== JOIN ROOM =================================
-joinBtn.onclick = () => {
-    freezeGame();
-    connectWS();
+if (joinBtn) {
+    joinBtn.onclick = () => {
+        freezeGame();
+        connectWS();
 
-    const code = roomInput.value.trim();
-    if (!code) {
-        alert("Enter a room code!");
-        return;
-    }
+        const code = roomInput ? roomInput.value.trim() : "";
+        if (!code) {
+            alert("Enter a room code!");
+            return;
+        }
 
-    ws.send(JSON.stringify({
-        type: "join_room",
-        code: code
-    }));
-};
+        if (!ws) return;
+
+        ws.send(JSON.stringify({
+            type: "join_room",
+            code: code
+        }));
+    };
+}
