@@ -1,117 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Full Screen</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flappy Full Screen</title>
 
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #333;
-            overflow: hidden; /* Scroll bars hatane ke liye */
-            touch-action: none; /* Mobile par double tap zoom rokne ke liye */
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #333;
+      overflow: hidden;
+      /* Scroll bars hatane ke liye */
+      touch-action: none;
+      /* Mobile par double tap zoom rokne ke liye */
+    }
 
-        /* ===== MENU OVERLAY ===== */
-        #menuOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.45);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
 
-        .menu-box {
-            background: #fff;
-            padding: 22px 30px;
-            border-radius: 14px;
-            text-align: center;
-            font-family: Arial, sans-serif;
-            width: 270px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
+    /* ===== MENU OVERLAY ===== */
+    #menuOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
 
-        .menu-box h1 {
-            margin-top: 0;
-            margin-bottom: 14px;
-        }
+    .menu-box {
+      background: #fff;
+      padding: 22px 30px;
+      border-radius: 14px;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      width: 270px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
 
-        .menu-box button {
-            width: 100%;
-            padding: 10px;
-            margin: 6px 0;
-            font-size: 17px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            color: #fff;
-        }
+    .menu-box h1 {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
 
-        #btnSolo {
-            background: #4caf50;
-        }
+    .menu-box button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      font-size: 17px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+    }
 
-        #btnCreate {
-            background: #2196f3;
-        }
+    #btnSolo {
+      background: #4caf50;
+    }
 
-        #btnJoin {
-            background: #ff9800;
-        }
+    #btnCreate {
+      background: #2196f3;
+    }
 
-        .join-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-        }
+    #btnJoin {
+      background: #ff9800;
+    }
 
-        .join-row input {
-            flex: 1;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
+    .join-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
 
-        #roomInfo {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #222;
-        }
-    </style>
+    .join-row input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    /* ===== PORTRAIT OVERLAY REMOVED ===== */
+
+    #roomInfo {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #222;
+      min-height: 1.2em;
+    }
+
+    #createdRoomRow {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 10px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 8px;
+    }
+  </style>
 </head>
+
 <body>
 
-<canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
-<!-- ===== START MENU ===== -->
-<div id="menuOverlay">
+  <!-- ===== START MENU ===== -->
+  <div id="menuOverlay">
     <div class="menu-box">
-        <h1>Flappy</h1>
+      <h1>Flappy</h1>
 
-        <button id="btnSolo">Solo</button>
-        <button id="btnCreate">Create Room</button>
+      <input id="playerName" maxlength="8" placeholder="Enter Name (Max 8)"
+        style="width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
 
-        <div class="join-row">
-            <input id="roomCodeInput" maxlength="6" placeholder="Room code" />
-            <button id="btnJoin">Join</button>
+      <button id="btnSolo">Solo</button>
+      <button id="btnCreate">Create Room</button>
+
+      <div class="join-row">
+        <input id="roomCodeInput" maxlength="6" placeholder="Room code" />
+        <button id="btnJoin">Join</button>
+      </div>
+
+      <div id="createdRoomRow">
+        <span style="font-size: 12px; color: #555;">Share this code:</span>
+        <div style="display: flex; gap: 5px;">
+          <input id="createdRoomCode" readonly
+            style="flex:1; text-align: center; font-weight: bold; background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 5px;">
+          <button id="btnCopyCode" style="width: auto; margin: 0; padding: 5px 10px; background: #607d8b;">Copy</button>
         </div>
+        <p style="margin: 5px 0 0 0; font-size: 13px; color: #E91E63; font-weight: bold;">Waiting for friend...</p>
+      </div>
 
-        <p id="roomInfo"></p>
+      <p id="roomInfo"></p>
     </div>
-</div>
+  </div>
 
-<!-- SCRIPT ORDER: pehle game, phir menu, phir multiplayer -->
-<script src="game.js"></script>
-<script src="menu.js"></script>
-<script src="multiplayer.js"></script>
+  <!-- SCRIPT ORDER: pehle game, phir menu, phir multiplayer -->
+  <script src="game.js"></script>
+  <script src="menu.js"></script>
+  <script src="multiplayer.js"></script>
 </body>
+
 </html>
