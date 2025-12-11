@@ -68,7 +68,13 @@
   // ---- Buttons ----
 
   btnCreate.onclick = () => {
-    const name = nameInput.value.trim() || "Player 1";
+    const name = nameInput.value.trim();
+    if (!name) {
+      roomInfo.textContent = "Please enter your name!";
+      roomInfo.style.color = "red";
+      return;
+    }
+    roomInfo.style.color = "#222";
     window.playerName = name; // Save locally
 
     roomInfo.textContent = "Creating room... (approx 2s)";
@@ -84,7 +90,14 @@
 
   btnJoin.onclick = () => {
     const code = roomCodeInput.value.trim();
-    const name = nameInput.value.trim() || "Player 2";
+    const name = nameInput.value.trim();
+
+    if (!name) {
+      roomInfo.textContent = "Please enter your name!";
+      roomInfo.style.color = "red";
+      return;
+    }
+    roomInfo.style.color = "#222";
     window.playerName = name;
 
     if (code.length < 6) {

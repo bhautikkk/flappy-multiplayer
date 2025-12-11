@@ -12,6 +12,16 @@ window.multiplayerRole = null;     // 'host' | 'guest'
 
 // SOLO: sirf menu hide, game.js normal physics se chalega
 btnSolo.onclick = () => {
+  const nameInput = document.getElementById("playerName");
+  if (!nameInput.value.trim()) {
+    roomInfo.textContent = "Please enter your name!";
+    roomInfo.style.color = "red";
+    return;
+  }
+  roomInfo.textContent = "";
+  roomInfo.style.color = "#222";
+  window.playerName = nameInput.value.trim();
+
   window.multiplayerMode = "solo";
   window.multiplayerRole = null;
   menu.style.display = "none";

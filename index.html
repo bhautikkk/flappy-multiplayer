@@ -85,7 +85,37 @@
       border: 1px solid #ccc;
     }
 
-    /* ===== PORTRAIT OVERLAY REMOVED ===== */
+    /* ===== LANDSCAPE ALERT OVERLAY (Mobile) ===== */
+    #landscapeOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      color: #fff;
+      z-index: 10000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #landscapeOverlay h2 {
+      margin-bottom: 15px;
+      font-size: 24px;
+    }
+
+    #landscapeOverlay p {
+      font-size: 16px;
+      color: #ddd;
+    }
+
+    /* Show only if width > height (landscape) AND max-width is < 1200px (Mobile/Tablet) */
+    @media screen and (orientation: landscape) and (max-width: 1200px) {
+      #landscapeOverlay {
+        display: flex;
+      }
+    }
 
     #roomInfo {
       margin-top: 10px;
@@ -138,6 +168,12 @@
 
       <p id="roomInfo"></p>
     </div>
+  </div>
+
+  <!-- ===== LANDSCAPE OVERLAY DIV ===== -->
+  <div id="landscapeOverlay">
+    <h2>Rotate Device</h2>
+    <p>Please switch to Portrait Mode to play!</p>
   </div>
 
   <!-- SCRIPT ORDER: pehle game, phir menu, phir multiplayer -->
